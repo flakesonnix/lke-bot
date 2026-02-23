@@ -7,7 +7,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
-use shared::{UpdateBotSettings, UpdateLevelSettings};
+use shared::{UpdateBotSettings, UpdateLevelSettings, UpdateWelcomeSettings};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SettingsRequest {
@@ -24,6 +24,18 @@ pub struct LevelingSettingsRequest {
     pub cooldown_seconds: i64,
     pub announce_channel_id: Option<String>,
     pub level_up_message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WelcomeSettingsRequest {
+    pub welcome_enabled: bool,
+    pub welcome_channel_id: Option<String>,
+    pub welcome_message: String,
+    pub welcome_dm: bool,
+    pub goodbye_enabled: bool,
+    pub goodbye_channel_id: Option<String>,
+    pub goodbye_message: String,
+    pub auto_role_id: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -298,6 +310,68 @@ pub async fn update_leveling_settings(
         Ok(_) => Json(SettingsResponse {
             success: true,
             message: "Leveling settings updated successfully".to_string(),
+        })
+        .into_response(),
+        Err(e) => Json(SettingsResponse {
+            success: false,
+            message: format!("Failed to update settings: {}", e),
+        })
+        .into_response(),
+    }
+}
+
+pub async fn update_welcome_settings(
+    State(state): State<std::sync::Arc<AppState>>,
+    session: Session,
+    Json(payload): Json<WelcomeSettingsRequest>,
+) -> Response<Body> {
+    let user: Option<DiscordUser> = session.get("user").await.ok().flatten();
+
+    let _user = match user {
+        Some(u) => u,
+        None => {
+            return Json(SettingsResponse {
+                success: false,
+                message: "Not authenticated".to_string(),
+            })
+            .into_response();
+        }
+    };
+
+    let guilds: Vec<crate::session::DiscordGuild> = session
+        .get("guilds")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+
+    let is_admin = guilds.iter().any(|g| g.has_admin() || g.is_owner());
+
+    if !is_admin {
+        return Json(SettingsResponse {
+            success: false,
+            message: "Admin permissions required".to_string(),
+        })
+        .into_response();
+    }
+
+    let guild_id = state.config.guild_id.unwrap_or(0).to_string();
+    let settings = UpdateWelcomeSettings {
+        welcome_enabled: payload.welcome_enabled,
+        welcome_channel_id: payload.welcome_channel_id,
+        welcome_message: payload.welcome_message,
+        welcome_dm: payload.welcome_dm,
+        goodbye_enabled: payload.goodbye_enabled,
+        goodbye_channel_id: payload.goodbye_channel_id,
+        goodbye_message: payload.goodbye_message,
+        auto_role_id: payload.auto_role_id,
+        welcome_card_enabled: false,
+    };
+
+    match state.welcome_repo.update_settings(&guild_id, settings).await {
+        Ok(_) => Json(SettingsResponse {
+            success: true,
+            message: "Welcome settings updated successfully".to_string(),
         })
         .into_response(),
         Err(e) => Json(SettingsResponse {

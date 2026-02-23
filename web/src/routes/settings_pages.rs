@@ -37,6 +37,21 @@ pub async fn leveling_settings(
     settings::leveling_settings(settings, leaderboard).into_response()
 }
 
+pub async fn welcome_settings(
+    State(state): State<std::sync::Arc<AppState>>,
+    session: Session,
+) -> Response<Body> {
+    let user: Option<DiscordUser> = session.get("user").await.ok().flatten();
+
+    if user.is_none() {
+        return Redirect::to("/").into_response();
+    }
+
+    let guild_id = state.config.guild_id.unwrap_or(0).to_string();
+    let settings = state.welcome_repo.get_settings(&guild_id).await.ok();
+    settings::welcome_settings(settings).into_response()
+}
+
 pub async fn ticket_settings(
     State(state): State<std::sync::Arc<AppState>>,
     session: Session,
