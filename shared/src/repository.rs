@@ -859,8 +859,9 @@ impl LevelRepository {
         match last_message {
             Some((Some(last),)) => {
                 if let Ok(last_time) = chrono::DateTime::parse_from_rfc3339(&last) {
+                    let last_utc = last_time.with_timezone(&chrono::Utc);
                     let now = chrono::Utc::now();
-                    let elapsed = (now - last_time).num_seconds();
+                    let elapsed = (now - last_utc).num_seconds();
                     return Ok(elapsed >= cooldown_seconds);
                 }
                 Ok(true)
