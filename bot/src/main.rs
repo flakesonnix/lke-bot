@@ -138,6 +138,10 @@ async fn main() -> Result<()> {
                 commands::userinfo(),
                 commands::help(),
                 commands::roll(),
+                commands::rank(),
+                commands::leaderboard(),
+                commands::setxp(),
+                commands::addxp(),
             ],
             prefix_options: PrefixFrameworkOptions {
                 prefix: Some("!".into()),
