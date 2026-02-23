@@ -1,0 +1,13 @@
+/target/
+.env
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+sessions/
+.DS_Store
+*.log
+node_modules/
+pnpm-lock.yaml
+.idea/
+.ai/

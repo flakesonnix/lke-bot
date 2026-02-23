@@ -1,0 +1,17 @@
+{
+  "name": "lke-bot",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:web": "portless lke-web cargo run -p web",
+    "dev:bot": "portless lke-bot cargo run -p bot",
+    "dev": "portless proxy start",
+    "proxy:start": "portless proxy start",
+    "proxy:stop": "portless proxy stop",
+    "proxy:https": "portless proxy start --https",
+    "list": "portless list"
+  },
+  "devDependencies": {
+    "portless": "^0.4.0"
+  }
+}

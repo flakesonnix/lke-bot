@@ -1,0 +1,63 @@
+{
+  "bot": {
+    "online": "Der Bot ist jetzt online!",
+    "error": "Ein Fehler ist aufgetreten"
+  },
+  "commands": {
+    "ping": {
+      "description": "Pinge den Bot",
+      "response": "Pong! Latenz: {{latency}}ms"
+    },
+    "help": {
+      "description": "Zeige verfügbare Befehle",
+      "title": "Verfügbare Befehle"
+    },
+    "userinfo": {
+      "description": "Zeige Benutzerinformationen",
+      "title": "Benutzerinformationen",
+      "username": "Benutzername",
+      "id": "ID",
+      "bot": "Bot"
+    },
+    "roll": {
+      "description": "Würfel werfen",
+      "result": "Du hast eine {{result}} auf einem {{sides}}-seitigen Würfel gewürfelt!",
+      "invalid": "Ein Würfel muss mindestens 2 Seiten haben!"
+    },
+    "ticket": {
+      "description": "Erstelle ein Support-Ticket",
+      "title": "Ticket erstellen",
+      "created": "Ticket erstellt: {{channel}}",
+      "already_open": "Du hast bereits ein offenes Ticket",
+      "not_enabled": "Das Ticket-System ist nicht aktiviert",
+      "close": {
+        "description": "Schließe ein Ticket",
+        "closed": "Ticket geschlossen von {{user}}",
+        "not_ticket": "Dies ist kein Ticket-Kanal",
+        "approval_prompt": "Wurde dein Problem gelöst?",
+        "approved": "Danke für dein Feedback!",
+        "denied": "Es tut uns leid, dass dein Problem nicht gelöst wurde. Bitte erstelle ein neues Ticket bei Bedarf."
+      }
+    }
+  },
+  "moderation": {
+    "bad_name": "Dein Benutzername oder Spitzname enthält unangemessene Inhalte. Bitte ändere ihn.",
+    "bad_message": "Deine Nachricht wurde gelöscht, da sie unangemessene Inhalte enthält.",
+    "nsfw_avatar": "Dein Profilbild wurde als unangemessen gekennzeichnet. Bitte ändere es.",
+    "warn_title": "Warnung",
+    "muted": "Du wurdest stummgeschaltet wegen Verstößen gegen die Serverregeln.",
+    "log": {
+      "bad_name": "Unangemessener Name erkannt",
+      "bad_message": "Unangemessene Nachricht gelöscht",
+      "nsfw_avatar": "NSFW Avatar erkannt"
+    }
+  },
+  "tickets": {
+    "panel_title": "Support Tickets",
+    "panel_description": "Klicke auf den Button unten, um ein Ticket zu erstellen",
+    "create_button": "Ticket erstellen",
+    "close_button": "Ticket schließen",
+    "transcript_title": "Ticket-Transkript",
+    "transcript_footer": "Ticket #{{id}}"
+  }
+}

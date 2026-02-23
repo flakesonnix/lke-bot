@@ -1,0 +1,67 @@
+[config]
+skip_core_tasks = true
+
+[tasks.dev-web]
+description = "Start web server with portless"
+command = "npm"
+args = ["run", "dev:web"]
+
+[tasks.dev-bot]
+description = "Start bot with portless"
+command = "npm"
+args = ["run", "dev:bot"]
+
+[tasks.dev]
+description = "Start portless proxy"
+command = "npm"
+args = ["run", "dev"]
+
+[tasks.proxy-start]
+description = "Start portless proxy"
+command = "npm"
+args = ["run", "proxy:start"]
+
+[tasks.proxy-stop]
+description = "Stop portless proxy"
+command = "npm"
+args = ["run", "proxy:stop"]
+
+[tasks.proxy-https]
+description = "Start portless proxy with HTTPS"
+command = "npm"
+args = ["run", "proxy:https"]
+
+[tasks.list]
+description = "List portless processes"
+command = "npm"
+args = ["run", "list"]
+
+[tasks.build]
+description = "Build workspace"
+command = "cargo"
+args = ["build", "--workspace"]
+
+[tasks.check]
+description = "Check workspace"
+command = "cargo"
+args = ["check", "--workspace"]
+
+[tasks.clippy]
+description = "Run clippy"
+command = "cargo"
+args = ["clippy", "--workspace", "--", "-D", "warnings"]
+
+[tasks.fmt]
+description = "Format code"
+command = "cargo"
+args = ["fmt", "--all"]
+
+[tasks.web]
+description = "Run web server directly"
+command = "cargo"
+args = ["run", "-p", "web"]
+
+[tasks.bot]
+description = "Run bot directly"
+command = "cargo"
+args = ["run", "-p", "bot"]

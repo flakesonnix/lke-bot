@@ -1,0 +1,63 @@
+{
+  "bot": {
+    "online": "Bot is now online!",
+    "error": "An error occurred"
+  },
+  "commands": {
+    "ping": {
+      "description": "Ping the bot",
+      "response": "Pong! Latency: {{latency}}ms"
+    },
+    "help": {
+      "description": "Show available commands",
+      "title": "Available Commands"
+    },
+    "userinfo": {
+      "description": "Display user information",
+      "title": "User Information",
+      "username": "Username",
+      "id": "ID",
+      "bot": "Bot"
+    },
+    "roll": {
+      "description": "Roll a dice",
+      "result": "You rolled a {{result}} on a {{sides}}-sided die!",
+      "invalid": "A dice must have at least 2 sides!"
+    },
+    "ticket": {
+      "description": "Create a support ticket",
+      "title": "Create Ticket",
+      "created": "Ticket created: {{channel}}",
+      "already_open": "You already have an open ticket",
+      "not_enabled": "Ticket system is not enabled",
+      "close": {
+        "description": "Close a ticket",
+        "closed": "Ticket closed by {{user}}",
+        "not_ticket": "This is not a ticket channel",
+        "approval_prompt": "Was your issue resolved?",
+        "approved": "Thank you for your feedback!",
+        "denied": "We're sorry your issue wasn't resolved. Please create a new ticket if needed."
+      }
+    }
+  },
+  "moderation": {
+    "bad_name": "Your username or nickname contains inappropriate content. Please change it.",
+    "bad_message": "Your message was deleted for containing inappropriate content.",
+    "nsfw_avatar": "Your profile picture has been flagged as inappropriate. Please change it.",
+    "warn_title": "Warning",
+    "muted": "You have been muted for violating server rules.",
+    "log": {
+      "bad_name": "Inappropriate name detected",
+      "bad_message": "Inappropriate message deleted",
+      "nsfw_avatar": "NSFW avatar detected"
+    }
+  },
+  "tickets": {
+    "panel_title": "Support Tickets",
+    "panel_description": "Click the button below to create a ticket",
+    "create_button": "Create Ticket",
+    "close_button": "Close Ticket",
+    "transcript_title": "Ticket Transcript",
+    "transcript_footer": "Ticket #{{id}}"
+  }
+}

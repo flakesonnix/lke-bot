@@ -1,0 +1,13 @@
+[package]
+name = "shared"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+sqlx = { workspace = true, features = ["runtime-tokio", "sqlite"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+chrono = "0.4"
+dotenvy = "0.15"

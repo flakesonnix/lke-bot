@@ -1,0 +1,27 @@
+[package]
+name = "bot"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+shared = { path = "../shared" }
+poise = "0.6"
+songbird = { version = "0.5", features = ["builtin-queue"] }
+tokio = { workspace = true }
+sqlx = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rand = "0.10.0"
+dotenvy = "0.15"
+image = { workspace = true }
+reqwest = { workspace = true }
+once_cell = { workspace = true }
+rust-i18n = { workspace = true }
+regex = "1.10"
+fancy-regex = "0.14"
+
+[features]
+default = []
