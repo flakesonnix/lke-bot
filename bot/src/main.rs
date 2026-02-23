@@ -14,16 +14,17 @@ use std::time::Duration;
 use tokio::sync::watch;
 
 use shared::{
-    config::Config, db, repository::{BotSettingsRepository, LevelRepository, WelcomeRepository},
+    config::Config, db, repository::{BotSettingsRepository, LevelRepository, ModerationRepository, WelcomeRepository},
     BotSettings,
 };
 
-use events::{LevelingHandler, WelcomeHandler};
+use events::{AutoModHandler, LevelingHandler, WelcomeHandler};
 
 pub struct BotState {
     pub settings_repo: BotSettingsRepository,
     pub level_repo: LevelRepository,
     pub welcome_repo: WelcomeRepository,
+    pub moderation_repo: ModerationRepository,
     pub activity_rx: watch::Receiver<Option<ActivityData>>,
 }
 
@@ -39,6 +40,7 @@ async fn event_handler(
 ) -> Result<(), Error> {
     match event {
         FullEvent::Message { new_message } => {
+            AutoModHandler::handle_message(ctx, new_message, data).await?;
             LevelingHandler::handle_message(ctx, new_message, data).await?;
         }
         FullEvent::GuildMemberAddition { new_member } => {
@@ -204,6 +206,7 @@ async fn main() -> Result<()> {
                     settings_repo: BotSettingsRepository::new(pool.clone()),
                     level_repo: LevelRepository::new(pool.clone()),
                     welcome_repo: WelcomeRepository::new(pool.clone()),
+                    moderation_repo: ModerationRepository::new(pool.clone()),
                     activity_rx,
                 }))
             })
