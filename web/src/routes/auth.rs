@@ -227,6 +227,10 @@ pub async fn auth_callback(
         error!("Failed to insert guilds into session: {:?}", e);
     }
 
+    if let Err(e) = session.insert("discord_token", token.access_token).await {
+        error!("Failed to insert discord_token into session: {:?}", e);
+    }
+
     Redirect::to("/dashboard").into_response()
 }
 

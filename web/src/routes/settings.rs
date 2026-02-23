@@ -38,10 +38,138 @@ pub struct PingResponse {
     pub timestamp: i64,
 }
 
+#[derive(Debug, Serialize)]
+pub struct GuildResourcesResponse {
+    pub channels: Vec<ChannelInfo>,
+    pub roles: Vec<RoleInfo>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ChannelInfo {
+    pub id: String,
+    pub name: String,
+    pub icon: String,
+    pub channel_type: i32,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RoleInfo {
+    pub id: String,
+    pub name: String,
+    pub color: String,
+    pub position: i32,
+}
+
 pub async fn ping() -> Response<Body> {
     Json(PingResponse {
         pong: true,
         timestamp: chrono::Utc::now().timestamp_millis(),
+    })
+    .into_response()
+}
+
+pub async fn get_guild_resources(
+    State(state): State<std::sync::Arc<AppState>>,
+    session: Session,
+) -> Response<Body> {
+    let user: Option<DiscordUser> = session.get("user").await.ok().flatten();
+
+    let user = match user {
+        Some(u) => u,
+        None => {
+            return Json(GuildResourcesResponse {
+                channels: vec![],
+                roles: vec![],
+            })
+            .into_response();
+        }
+    };
+
+    let guild_id = match state.config.guild_id {
+        Some(id) => id.to_string(),
+        None => {
+            return Json(GuildResourcesResponse {
+                channels: vec![],
+                roles: vec![],
+            })
+            .into_response();
+        }
+    };
+
+    let token: Option<String> = session.get("discord_token").await.ok().flatten();
+    let token = match token {
+        Some(t) => t,
+        None => {
+            return Json(GuildResourcesResponse {
+                channels: vec![],
+                roles: vec![],
+            })
+            .into_response();
+        }
+    };
+
+    let channels_url = format!("https://discord.com/api/v10/guilds/{}/channels", guild_id);
+    let roles_url = format!("https://discord.com/api/v10/guilds/{}/roles", guild_id);
+
+    let client = &state.http_client;
+
+    let channels_res = client
+        .get(&channels_url)
+        .bearer_auth(&token)
+        .send()
+        .await;
+
+    let roles_res = client
+        .get(&roles_url)
+        .bearer_auth(&token)
+        .send()
+        .await;
+
+    let channels: Vec<crate::session::DiscordChannel> = match channels_res {
+        Ok(res) if res.status().is_success() => {
+            res.json().await.unwrap_or_default()
+        }
+        _ => vec![],
+    };
+
+    let roles: Vec<crate::session::DiscordRole> = match roles_res {
+        Ok(res) if res.status().is_success() => {
+            res.json().await.unwrap_or_default()
+        }
+        _ => vec![],
+    };
+
+    let channel_info: Vec<ChannelInfo> = channels
+        .into_iter()
+        .filter(|c| c.is_text())
+        .map(|c| {
+            let icon = c.type_icon().to_string();
+            ChannelInfo {
+                id: c.id,
+                name: c.name,
+                icon,
+                channel_type: c.channel_type,
+            }
+        })
+        .collect();
+
+    let role_info: Vec<RoleInfo> = roles
+        .into_iter()
+        .filter(|r| r.name != "@everyone")
+        .map(|r| {
+            let color = r.color_hex();
+            RoleInfo {
+                id: r.id,
+                name: r.name,
+                color,
+                position: r.position,
+            }
+        })
+        .collect();
+
+    Json(GuildResourcesResponse {
+        channels: channel_info,
+        roles: role_info,
     })
     .into_response()
 }

@@ -72,6 +72,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/settings/music", get(routes::music_settings))
         .route("/api/settings", post(routes::update_settings))
         .route("/api/leveling/settings", post(routes::update_leveling_settings))
+        .route("/api/guild/resources", get(routes::get_guild_resources))
         .route("/api/ping", get(routes::ping))
         .route("/logout", get(routes::logout))
         .layer(session_layer)
