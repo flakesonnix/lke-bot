@@ -435,3 +435,220 @@ pub struct UpdateWelcomeSettings {
     pub auto_role_id: Option<String>,
     pub welcome_card_enabled: bool,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CustomCommand {
+    pub id: i64,
+    pub guild_id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub response: String,
+    pub embed_title: Option<String>,
+    pub embed_description: Option<String>,
+    pub embed_color: Option<i64>,
+    pub embed_image_url: Option<String>,
+    pub embed_thumbnail_url: Option<String>,
+    pub created_by: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub enabled: bool,
+    pub cooldown_seconds: i64,
+    pub require_permissions: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewCustomCommand {
+    pub guild_id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub response: String,
+    pub embed_title: Option<String>,
+    pub embed_description: Option<String>,
+    pub embed_color: Option<i64>,
+    pub embed_image_url: Option<String>,
+    pub embed_thumbnail_url: Option<String>,
+    pub created_by: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateCustomCommand {
+    pub description: Option<String>,
+    pub response: String,
+    pub embed_title: Option<String>,
+    pub embed_description: Option<String>,
+    pub embed_color: Option<i64>,
+    pub embed_image_url: Option<String>,
+    pub embed_thumbnail_url: Option<String>,
+    pub enabled: bool,
+    pub cooldown_seconds: i64,
+    pub require_permissions: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct AutoResponse {
+    pub id: i64,
+    pub guild_id: String,
+    pub trigger_type: String,
+    pub trigger_pattern: String,
+    pub response: String,
+    pub response_type: String,
+    pub embed_title: Option<String>,
+    pub embed_description: Option<String>,
+    pub embed_color: Option<i64>,
+    pub created_by: String,
+    pub created_at: String,
+    pub enabled: bool,
+    pub case_sensitive: bool,
+    pub cooldown_seconds: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewAutoResponse {
+    pub guild_id: String,
+    pub trigger_type: String,
+    pub trigger_pattern: String,
+    pub response: String,
+    pub response_type: String,
+    pub embed_title: Option<String>,
+    pub embed_description: Option<String>,
+    pub embed_color: Option<i64>,
+    pub created_by: String,
+    pub case_sensitive: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateAutoResponse {
+    pub trigger_type: String,
+    pub trigger_pattern: String,
+    pub response: String,
+    pub response_type: String,
+    pub embed_title: Option<String>,
+    pub embed_description: Option<String>,
+    pub embed_color: Option<i64>,
+    pub enabled: bool,
+    pub case_sensitive: bool,
+    pub cooldown_seconds: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CommandPermission {
+    pub id: i64,
+    pub guild_id: String,
+    pub command_type: String,
+    pub command_id: i64,
+    pub role_id: Option<String>,
+    pub user_id: Option<String>,
+    pub allowed: bool,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewCommandPermission {
+    pub guild_id: String,
+    pub command_type: String,
+    pub command_id: i64,
+    pub role_id: Option<String>,
+    pub user_id: Option<String>,
+    pub allowed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ReactionRole {
+    pub id: i64,
+    pub guild_id: String,
+    pub role_id: String,
+    pub emoji: String,
+    pub description: Option<String>,
+    pub created_at: String,
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewReactionRole {
+    pub guild_id: String,
+    pub role_id: String,
+    pub emoji: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ReactionRoleMessage {
+    pub id: i64,
+    pub guild_id: String,
+    pub channel_id: String,
+    pub message_id: String,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub color: Option<i64>,
+    pub created_by: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewReactionRoleMessage {
+    pub guild_id: String,
+    pub channel_id: String,
+    pub message_id: String,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub color: Option<i64>,
+    pub created_by: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ReactionRoleMessageItem {
+    pub id: i64,
+    pub message_id: i64,
+    pub reaction_role_id: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewReactionRoleMessageItem {
+    pub message_id: i64,
+    pub reaction_role_id: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct MusicQueue {
+    pub id: i64,
+    pub guild_id: String,
+    pub queue_data: String,
+    pub current_index: i64,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QueuedTrack {
+    pub track_id: String,
+    pub title: String,
+    pub artist: Option<String>,
+    pub source: String,
+    pub url: String,
+    pub duration_seconds: Option<i64>,
+    pub requested_by: String,
+    pub thumbnail_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateMusicQueue {
+    pub queue_data: String,
+    pub current_index: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct SavedPlaylist {
+    pub id: i64,
+    pub guild_id: String,
+    pub name: String,
+    pub tracks: String,
+    pub created_by: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewSavedPlaylist {
+    pub guild_id: String,
+    pub name: String,
+    pub tracks: String,
+    pub created_by: String,
+}

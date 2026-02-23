@@ -1,12 +1,15 @@
 use crate::{
-    BotSettings, CustomTranslation, DailyStats, Error, GuildTtsState, LevelReward, LevelSettings,
-    ModerationSettings, ModerationWarning, MusicPlaytime, MusicSettings, MusicStat,
+    AutoResponse, BotSettings, CommandPermission, CustomCommand, CustomTranslation, DailyStats,
+    Error, GuildTtsState, LevelReward, LevelSettings, ModerationSettings, ModerationWarning,
+    MusicQueue, MusicSettings, MusicStat, NewAutoResponse, NewCommandPermission, NewCustomCommand,
     NewCustomTranslation, NewLevelReward, NewLevelSettings, NewModerationWarning, NewMusicStat,
+    NewReactionRole, NewReactionRoleMessage, NewReactionRoleMessageItem, NewSavedPlaylist,
     NewTicket, NewTicketMessage, NewTtsPermission, NewUser, NewWelcomeSettings, NewXpMultiplier,
-    Result, Ticket, TicketMessage, TicketSettings, TrackStats, TtsPermission, TtsSettings,
-    UpdateBotSettings, UpdateGuildTtsState, UpdateLevelSettings, UpdateModerationSettings,
-    UpdateMusicSettings, UpdateTicketSettings, UpdateTtsSettings, UpdateUser, UpdateWelcomeSettings,
-    User, UserLevel, WelcomeSettings, XpMultiplier,
+    ReactionRole, ReactionRoleMessage, ReactionRoleMessageItem, Result, SavedPlaylist, Ticket,
+    TicketMessage, TicketSettings, TrackStats, TtsPermission, TtsSettings, UpdateAutoResponse,
+    UpdateBotSettings, UpdateCustomCommand, UpdateGuildTtsState, UpdateLevelSettings,
+    UpdateModerationSettings, UpdateMusicSettings, UpdateTicketSettings, UpdateTtsSettings,
+    UpdateUser, UpdateWelcomeSettings, User, UserLevel, WelcomeSettings, XpMultiplier,
 };
 use sqlx::SqlitePool;
 
@@ -742,6 +745,103 @@ impl MusicRepository {
 
         Ok(result)
     }
+
+    pub async fn get_queue(&self, guild_id: &str) -> Result<Option<MusicQueue>> {
+        let queue = sqlx::query_as::<_, MusicQueue>(
+            "SELECT * FROM music_queues WHERE guild_id = ?"
+        )
+        .bind(guild_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(queue)
+    }
+
+    pub async fn save_queue(&self, guild_id: &str, queue_data: &str, current_index: i64) -> Result<()> {
+        let now = chrono::Utc::now().to_rfc3339();
+
+        sqlx::query(
+            r#"
+            INSERT INTO music_queues (guild_id, queue_data, current_index, updated_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(guild_id) DO UPDATE SET queue_data = ?, current_index = ?, updated_at = ?
+            "#
+        )
+        .bind(guild_id)
+        .bind(queue_data)
+        .bind(current_index)
+        .bind(&now)
+        .bind(queue_data)
+        .bind(current_index)
+        .bind(&now)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn clear_queue(&self, guild_id: &str) -> Result<()> {
+        sqlx::query("DELETE FROM music_queues WHERE guild_id = ?")
+            .bind(guild_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn get_playlist(&self, guild_id: &str, name: &str) -> Result<Option<SavedPlaylist>> {
+        let playlist = sqlx::query_as::<_, SavedPlaylist>(
+            "SELECT * FROM saved_playlists WHERE guild_id = ? AND name = ?"
+        )
+        .bind(guild_id)
+        .bind(name)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(playlist)
+    }
+
+    pub async fn list_playlists(&self, guild_id: &str) -> Result<Vec<SavedPlaylist>> {
+        let playlists = sqlx::query_as::<_, SavedPlaylist>(
+            "SELECT * FROM saved_playlists WHERE guild_id = ? ORDER BY name ASC"
+        )
+        .bind(guild_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(playlists)
+    }
+
+    pub async fn create_playlist(&self, playlist: NewSavedPlaylist) -> Result<SavedPlaylist> {
+        let now = chrono::Utc::now().to_rfc3339();
+
+        let result = sqlx::query(
+            "INSERT INTO saved_playlists (guild_id, name, tracks, created_by, created_at) VALUES (?, ?, ?, ?, ?)"
+        )
+        .bind(&playlist.guild_id)
+        .bind(&playlist.name)
+        .bind(&playlist.tracks)
+        .bind(&playlist.created_by)
+        .bind(&now)
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query_as::<_, SavedPlaylist>("SELECT * FROM saved_playlists WHERE id = ?")
+            .bind(result.last_insert_rowid())
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or_else(|| Error::NotFound("Playlist not found after insert".into()))
+    }
+
+    pub async fn delete_playlist(&self, guild_id: &str, name: &str) -> Result<()> {
+        sqlx::query("DELETE FROM saved_playlists WHERE guild_id = ? AND name = ?")
+            .bind(guild_id)
+            .bind(name)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
 }
 
 pub struct LevelRepository {
@@ -1097,5 +1197,549 @@ impl WelcomeRepository {
         .await?;
 
         self.get_settings(guild_id).await
+    }
+}
+
+pub struct CustomCommandRepository {
+    pool: SqlitePool,
+}
+
+impl CustomCommandRepository {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn get(&self, guild_id: &str, name: &str) -> Result<Option<CustomCommand>> {
+        let cmd = sqlx::query_as::<_, CustomCommand>(
+            "SELECT * FROM custom_commands WHERE guild_id = ? AND name = ?"
+        )
+        .bind(guild_id)
+        .bind(name)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(cmd)
+    }
+
+    pub async fn get_by_id(&self, id: i64) -> Result<Option<CustomCommand>> {
+        let cmd = sqlx::query_as::<_, CustomCommand>("SELECT * FROM custom_commands WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        Ok(cmd)
+    }
+
+    pub async fn list(&self, guild_id: &str) -> Result<Vec<CustomCommand>> {
+        let cmds = sqlx::query_as::<_, CustomCommand>(
+            "SELECT * FROM custom_commands WHERE guild_id = ? ORDER BY name ASC"
+        )
+        .bind(guild_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(cmds)
+    }
+
+    pub async fn create(&self, cmd: NewCustomCommand) -> Result<CustomCommand> {
+        let now = chrono::Utc::now().to_rfc3339();
+
+        let result = sqlx::query(
+            r#"
+            INSERT INTO custom_commands (guild_id, name, description, response, embed_title,
+                embed_description, embed_color, embed_image_url, embed_thumbnail_url, created_by,
+                created_at, updated_at, enabled, cooldown_seconds)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0)
+            "#
+        )
+        .bind(&cmd.guild_id)
+        .bind(&cmd.name)
+        .bind(&cmd.description)
+        .bind(&cmd.response)
+        .bind(&cmd.embed_title)
+        .bind(&cmd.embed_description)
+        .bind(cmd.embed_color)
+        .bind(&cmd.embed_image_url)
+        .bind(&cmd.embed_thumbnail_url)
+        .bind(&cmd.created_by)
+        .bind(&now)
+        .bind(&now)
+        .execute(&self.pool)
+        .await?;
+
+        self.get_by_id(result.last_insert_rowid())
+            .await?
+            .ok_or_else(|| Error::NotFound("Custom command not found after insert".into()))
+    }
+
+    pub async fn update(&self, id: i64, cmd: UpdateCustomCommand) -> Result<CustomCommand> {
+        let now = chrono::Utc::now().to_rfc3339();
+
+        sqlx::query(
+            r#"
+            UPDATE custom_commands 
+            SET description = ?, response = ?, embed_title = ?, embed_description = ?,
+                embed_color = ?, embed_image_url = ?, embed_thumbnail_url = ?, enabled = ?,
+                cooldown_seconds = ?, require_permissions = ?, updated_at = ?
+            WHERE id = ?
+            "#
+        )
+        .bind(&cmd.description)
+        .bind(&cmd.response)
+        .bind(&cmd.embed_title)
+        .bind(&cmd.embed_description)
+        .bind(cmd.embed_color)
+        .bind(&cmd.embed_image_url)
+        .bind(&cmd.embed_thumbnail_url)
+        .bind(cmd.enabled)
+        .bind(cmd.cooldown_seconds)
+        .bind(&cmd.require_permissions)
+        .bind(&now)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+
+        self.get_by_id(id)
+            .await?
+            .ok_or_else(|| Error::NotFound("Custom command not found after update".into()))
+    }
+
+    pub async fn delete(&self, id: i64) -> Result<()> {
+        sqlx::query("DELETE FROM custom_commands WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+}
+
+pub struct AutoResponseRepository {
+    pool: SqlitePool,
+}
+
+impl AutoResponseRepository {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn get_by_id(&self, id: i64) -> Result<Option<AutoResponse>> {
+        let resp = sqlx::query_as::<_, AutoResponse>("SELECT * FROM auto_responses WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        Ok(resp)
+    }
+
+    pub async fn list(&self, guild_id: &str) -> Result<Vec<AutoResponse>> {
+        let resps = sqlx::query_as::<_, AutoResponse>(
+            "SELECT * FROM auto_responses WHERE guild_id = ? ORDER BY created_at DESC"
+        )
+        .bind(guild_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(resps)
+    }
+
+    pub async fn create(&self, resp: NewAutoResponse) -> Result<AutoResponse> {
+        let now = chrono::Utc::now().to_rfc3339();
+
+        let result = sqlx::query(
+            r#"
+            INSERT INTO auto_responses (guild_id, trigger_type, trigger_pattern, response,
+                response_type, embed_title, embed_description, embed_color, created_by,
+                created_at, enabled, case_sensitive, cooldown_seconds)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 0)
+            "#
+        )
+        .bind(&resp.guild_id)
+        .bind(&resp.trigger_type)
+        .bind(&resp.trigger_pattern)
+        .bind(&resp.response)
+        .bind(&resp.response_type)
+        .bind(&resp.embed_title)
+        .bind(&resp.embed_description)
+        .bind(resp.embed_color)
+        .bind(&resp.created_by)
+        .bind(&now)
+        .bind(resp.case_sensitive)
+        .execute(&self.pool)
+        .await?;
+
+        self.get_by_id(result.last_insert_rowid())
+            .await?
+            .ok_or_else(|| Error::NotFound("Auto response not found after insert".into()))
+    }
+
+    pub async fn update(&self, id: i64, resp: UpdateAutoResponse) -> Result<AutoResponse> {
+        sqlx::query(
+            r#"
+            UPDATE auto_responses 
+            SET trigger_type = ?, trigger_pattern = ?, response = ?, response_type = ?,
+                embed_title = ?, embed_description = ?, embed_color = ?, enabled = ?,
+                case_sensitive = ?, cooldown_seconds = ?
+            WHERE id = ?
+            "#
+        )
+        .bind(&resp.trigger_type)
+        .bind(&resp.trigger_pattern)
+        .bind(&resp.response)
+        .bind(&resp.response_type)
+        .bind(&resp.embed_title)
+        .bind(&resp.embed_description)
+        .bind(resp.embed_color)
+        .bind(resp.enabled)
+        .bind(resp.case_sensitive)
+        .bind(resp.cooldown_seconds)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+
+        self.get_by_id(id)
+            .await?
+            .ok_or_else(|| Error::NotFound("Auto response not found after update".into()))
+    }
+
+    pub async fn delete(&self, id: i64) -> Result<()> {
+        sqlx::query("DELETE FROM auto_responses WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn find_matching(&self, guild_id: &str, content: &str) -> Result<Vec<AutoResponse>> {
+        let resps = sqlx::query_as::<_, AutoResponse>(
+            "SELECT * FROM auto_responses WHERE guild_id = ? AND enabled = 1"
+        )
+        .bind(guild_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut matches = Vec::new();
+        for resp in resps {
+            let pattern = if resp.case_sensitive {
+                resp.trigger_pattern.clone()
+            } else {
+                resp.trigger_pattern.to_lowercase()
+            };
+            let text = if resp.case_sensitive {
+                content.to_string()
+            } else {
+                content.to_lowercase()
+            };
+
+            let is_match = match resp.trigger_type.as_str() {
+                "contains" => text.contains(&pattern),
+                "starts_with" => text.starts_with(&pattern),
+                "ends_with" => text.ends_with(&pattern),
+                "exact" => text == pattern,
+                "regex" => {
+                    if let Ok(re) = regex::Regex::new(&pattern) {
+                        re.is_match(&text)
+                    } else {
+                        false
+                    }
+                }
+                _ => false,
+            };
+
+            if is_match {
+                matches.push(resp);
+            }
+        }
+
+        Ok(matches)
+    }
+}
+
+pub struct CommandPermissionRepository {
+    pool: SqlitePool,
+}
+
+impl CommandPermissionRepository {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn list(&self, command_type: &str, command_id: i64) -> Result<Vec<CommandPermission>> {
+        let perms = sqlx::query_as::<_, CommandPermission>(
+            "SELECT * FROM command_permissions WHERE command_type = ? AND command_id = ?"
+        )
+        .bind(command_type)
+        .bind(command_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(perms)
+    }
+
+    pub async fn add(&self, perm: NewCommandPermission) -> Result<CommandPermission> {
+        let now = chrono::Utc::now().to_rfc3339();
+
+        sqlx::query(
+            r#"
+            INSERT INTO command_permissions (guild_id, command_type, command_id, role_id, user_id, allowed, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(command_type, command_id, COALESCE(role_id, ''), COALESCE(user_id, ''))
+            DO UPDATE SET allowed = ?
+            "#
+        )
+        .bind(&perm.guild_id)
+        .bind(&perm.command_type)
+        .bind(perm.command_id)
+        .bind(&perm.role_id)
+        .bind(&perm.user_id)
+        .bind(perm.allowed)
+        .bind(&now)
+        .bind(perm.allowed)
+        .execute(&self.pool)
+        .await?;
+
+        let result = sqlx::query_as::<_, CommandPermission>(
+            "SELECT * FROM command_permissions WHERE command_type = ? AND command_id = ? AND COALESCE(role_id, '') = COALESCE(?, '') AND COALESCE(user_id, '') = COALESCE(?, '')"
+        )
+        .bind(&perm.command_type)
+        .bind(perm.command_id)
+        .bind(&perm.role_id)
+        .bind(&perm.user_id)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or_else(|| Error::NotFound("Permission not found after insert".into()))?;
+
+        Ok(result)
+    }
+
+    pub async fn remove(&self, id: i64) -> Result<()> {
+        sqlx::query("DELETE FROM command_permissions WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn check_allowed(&self, command_type: &str, command_id: i64, user_id: &str, role_ids: &[String]) -> Result<bool> {
+        let perms = self.list(command_type, command_id).await?;
+
+        if perms.is_empty() {
+            return Ok(true);
+        }
+
+        for perm in &perms {
+            if let Some(ref uid) = perm.user_id {
+                if uid == user_id {
+                    return Ok(perm.allowed);
+                }
+            }
+        }
+
+        for perm in &perms {
+            if let Some(ref rid) = perm.role_id {
+                if role_ids.contains(rid) {
+                    return Ok(perm.allowed);
+                }
+            }
+        }
+
+        Ok(false)
+    }
+}
+
+pub struct ReactionRoleRepository {
+    pool: SqlitePool,
+}
+
+impl ReactionRoleRepository {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn get(&self, guild_id: &str, emoji: &str) -> Result<Option<ReactionRole>> {
+        let rr = sqlx::query_as::<_, ReactionRole>(
+            "SELECT * FROM reaction_roles WHERE guild_id = ? AND emoji = ?"
+        )
+        .bind(guild_id)
+        .bind(emoji)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(rr)
+    }
+
+    pub async fn get_by_id(&self, id: i64) -> Result<Option<ReactionRole>> {
+        let rr = sqlx::query_as::<_, ReactionRole>("SELECT * FROM reaction_roles WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        Ok(rr)
+    }
+
+    pub async fn list(&self, guild_id: &str) -> Result<Vec<ReactionRole>> {
+        let rrs = sqlx::query_as::<_, ReactionRole>(
+            "SELECT * FROM reaction_roles WHERE guild_id = ? ORDER BY emoji ASC"
+        )
+        .bind(guild_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rrs)
+    }
+
+    pub async fn create(&self, rr: NewReactionRole) -> Result<ReactionRole> {
+        let now = chrono::Utc::now().to_rfc3339();
+
+        let result = sqlx::query(
+            "INSERT INTO reaction_roles (guild_id, role_id, emoji, description, created_at, enabled) VALUES (?, ?, ?, ?, ?, 1)"
+        )
+        .bind(&rr.guild_id)
+        .bind(&rr.role_id)
+        .bind(&rr.emoji)
+        .bind(&rr.description)
+        .bind(&now)
+        .execute(&self.pool)
+        .await?;
+
+        self.get_by_id(result.last_insert_rowid())
+            .await?
+            .ok_or_else(|| Error::NotFound("Reaction role not found after insert".into()))
+    }
+
+    pub async fn delete(&self, id: i64) -> Result<()> {
+        sqlx::query("DELETE FROM reaction_roles WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn set_enabled(&self, id: i64, enabled: bool) -> Result<()> {
+        sqlx::query("UPDATE reaction_roles SET enabled = ? WHERE id = ?")
+            .bind(enabled)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn get_message(&self, channel_id: &str, message_id: &str) -> Result<Option<ReactionRoleMessage>> {
+        let msg = sqlx::query_as::<_, ReactionRoleMessage>(
+            "SELECT * FROM reaction_role_messages WHERE channel_id = ? AND message_id = ?"
+        )
+        .bind(channel_id)
+        .bind(message_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(msg)
+    }
+
+    pub async fn get_message_by_id(&self, id: i64) -> Result<Option<ReactionRoleMessage>> {
+        let msg = sqlx::query_as::<_, ReactionRoleMessage>("SELECT * FROM reaction_role_messages WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        Ok(msg)
+    }
+
+    pub async fn list_messages(&self, guild_id: &str) -> Result<Vec<ReactionRoleMessage>> {
+        let msgs = sqlx::query_as::<_, ReactionRoleMessage>(
+            "SELECT * FROM reaction_role_messages WHERE guild_id = ? ORDER BY created_at DESC"
+        )
+        .bind(guild_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(msgs)
+    }
+
+    pub async fn create_message(&self, msg: NewReactionRoleMessage) -> Result<ReactionRoleMessage> {
+        let now = chrono::Utc::now().to_rfc3339();
+
+        let result = sqlx::query(
+            "INSERT INTO reaction_role_messages (guild_id, channel_id, message_id, title, description, color, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        )
+        .bind(&msg.guild_id)
+        .bind(&msg.channel_id)
+        .bind(&msg.message_id)
+        .bind(&msg.title)
+        .bind(&msg.description)
+        .bind(msg.color)
+        .bind(&msg.created_by)
+        .bind(&now)
+        .execute(&self.pool)
+        .await?;
+
+        self.get_message_by_id(result.last_insert_rowid())
+            .await?
+            .ok_or_else(|| Error::NotFound("Reaction role message not found after insert".into()))
+    }
+
+    pub async fn delete_message(&self, id: i64) -> Result<()> {
+        sqlx::query("DELETE FROM reaction_role_messages WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn add_item(&self, item: NewReactionRoleMessageItem) -> Result<ReactionRoleMessageItem> {
+        let result = sqlx::query(
+            "INSERT INTO reaction_role_message_items (message_id, reaction_role_id) VALUES (?, ?)"
+        )
+        .bind(item.message_id)
+        .bind(item.reaction_role_id)
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query_as::<_, ReactionRoleMessageItem>("SELECT * FROM reaction_role_message_items WHERE id = ?")
+            .bind(result.last_insert_rowid())
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or_else(|| Error::NotFound("Reaction role message item not found after insert".into()))
+    }
+
+    pub async fn remove_item(&self, message_id: i64, reaction_role_id: i64) -> Result<()> {
+        sqlx::query("DELETE FROM reaction_role_message_items WHERE message_id = ? AND reaction_role_id = ?")
+            .bind(message_id)
+            .bind(reaction_role_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn get_message_items(&self, message_id: i64) -> Result<Vec<ReactionRoleMessageItem>> {
+        let items = sqlx::query_as::<_, ReactionRoleMessageItem>(
+            "SELECT * FROM reaction_role_message_items WHERE message_id = ?"
+        )
+        .bind(message_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(items)
+    }
+
+    pub async fn get_reaction_roles_for_message(&self, message_id: i64) -> Result<Vec<ReactionRole>> {
+        let rrs = sqlx::query_as::<_, ReactionRole>(
+            r#"
+            SELECT rr.* FROM reaction_roles rr
+            JOIN reaction_role_message_items rri ON rr.id = rri.reaction_role_id
+            WHERE rri.message_id = ?
+            "#
+        )
+        .bind(message_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rrs)
     }
 }

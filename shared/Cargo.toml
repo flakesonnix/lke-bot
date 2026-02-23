@@ -11,3 +11,4 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 chrono = "0.4"
 dotenvy = "0.15"
+regex = "1"
