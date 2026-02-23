@@ -13,11 +13,8 @@ fn xp_for_level(level: i64) -> i64 {
     total
 }
 
-#[poise::command(
-    slash_command,
-    prefix_command,
-    description_localized("en", "Show your or another user's rank and XP")
-)]
+/// Show your or another user's rank and XP
+#[poise::command(slash_command, prefix_command)]
 pub async fn rank(
     ctx: Context<'_>,
     #[description = "User to check rank for"] user: Option<UserId>,
@@ -48,11 +45,8 @@ pub async fn rank(
     Ok(())
 }
 
-#[poise::command(
-    slash_command,
-    prefix_command,
-    description_localized("en", "Show the server XP leaderboard")
-)]
+/// Show the server XP leaderboard
+#[poise::command(slash_command, prefix_command)]
 pub async fn leaderboard(
     ctx: Context<'_>,
     #[description = "Page number"] page: Option<i64>,
@@ -105,12 +99,8 @@ pub async fn leaderboard(
     Ok(())
 }
 
-#[poise::command(
-    slash_command,
-    prefix_command,
-    required_permissions = "MANAGE_GUILD",
-    description_localized("en", "Set a user's XP (admin only)")
-)]
+/// Set a user's XP (admin only)
+#[poise::command(slash_command, prefix_command, required_permissions = "MANAGE_GUILD")]
 pub async fn setxp(
     ctx: Context<'_>,
     #[description = "User to set XP for"] user: UserId,
@@ -133,12 +123,8 @@ pub async fn setxp(
     Ok(())
 }
 
-#[poise::command(
-    slash_command,
-    prefix_command,
-    required_permissions = "MANAGE_GUILD",
-    description_localized("en", "Add XP to a user (admin only)")
-)]
+/// Add XP to a user (admin only)
+#[poise::command(slash_command, prefix_command, required_permissions = "MANAGE_GUILD")]
 pub async fn addxp(
     ctx: Context<'_>,
     #[description = "User to add XP to"] user: UserId,
