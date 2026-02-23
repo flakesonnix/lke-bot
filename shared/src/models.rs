@@ -607,3 +607,48 @@ pub struct NewReactionRoleMessageItem {
     pub message_id: i64,
     pub reaction_role_id: i64,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct MusicQueue {
+    pub id: i64,
+    pub guild_id: String,
+    pub queue_data: String,
+    pub current_index: i64,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QueuedTrack {
+    pub track_id: String,
+    pub title: String,
+    pub artist: Option<String>,
+    pub source: String,
+    pub url: String,
+    pub duration_seconds: Option<i64>,
+    pub requested_by: String,
+    pub thumbnail_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateMusicQueue {
+    pub queue_data: String,
+    pub current_index: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct SavedPlaylist {
+    pub id: i64,
+    pub guild_id: String,
+    pub name: String,
+    pub tracks: String,
+    pub created_by: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewSavedPlaylist {
+    pub guild_id: String,
+    pub name: String,
+    pub tracks: String,
+    pub created_by: String,
+}

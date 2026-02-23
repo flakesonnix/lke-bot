@@ -14,7 +14,7 @@ use std::time::Duration;
 use tokio::sync::watch;
 
 use shared::{
-    config::Config, db, repository::{AutoResponseRepository, BotSettingsRepository, CustomCommandRepository, LevelRepository, ModerationRepository, ReactionRoleRepository, WelcomeRepository},
+    config::Config, db, repository::{AutoResponseRepository, BotSettingsRepository, CustomCommandRepository, LevelRepository, ModerationRepository, MusicRepository, ReactionRoleRepository, WelcomeRepository},
     BotSettings,
 };
 
@@ -28,6 +28,7 @@ pub struct BotState {
     pub custom_cmd_repo: CustomCommandRepository,
     pub auto_resp_repo: AutoResponseRepository,
     pub reaction_role_repo: ReactionRoleRepository,
+    pub music_repo: MusicRepository,
     pub activity_rx: watch::Receiver<Option<ActivityData>>,
 }
 
@@ -184,6 +185,19 @@ async fn main() -> Result<()> {
                 commands::rrmsg_add(),
                 commands::rrmsg_remove(),
                 commands::rrmsg_list(),
+                commands::play(),
+                commands::skip(),
+                commands::stop(),
+                commands::pause(),
+                commands::resume(),
+                commands::queue(),
+                commands::volume(),
+                commands::leave(),
+                commands::np(),
+                commands::playlist_save(),
+                commands::playlist_load(),
+                commands::playlist_list(),
+                commands::playlist_delete(),
             ],
             prefix_options: PrefixFrameworkOptions {
                 prefix: Some("!".into()),
@@ -246,6 +260,7 @@ async fn main() -> Result<()> {
                     custom_cmd_repo: CustomCommandRepository::new(pool.clone()),
                     auto_resp_repo: AutoResponseRepository::new(pool.clone()),
                     reaction_role_repo: ReactionRoleRepository::new(pool.clone()),
+                    music_repo: MusicRepository::new(pool.clone()),
                     activity_rx,
                 }))
             })

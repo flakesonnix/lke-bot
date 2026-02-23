@@ -1,15 +1,15 @@
 use crate::{
     AutoResponse, BotSettings, CommandPermission, CustomCommand, CustomTranslation, DailyStats,
     Error, GuildTtsState, LevelReward, LevelSettings, ModerationSettings, ModerationWarning,
-    MusicSettings, MusicStat, NewAutoResponse, NewCommandPermission, NewCustomCommand,
+    MusicQueue, MusicSettings, MusicStat, NewAutoResponse, NewCommandPermission, NewCustomCommand,
     NewCustomTranslation, NewLevelReward, NewLevelSettings, NewModerationWarning, NewMusicStat,
-    NewReactionRole, NewReactionRoleMessage, NewReactionRoleMessageItem, NewTicket, NewTicketMessage,
-    NewTtsPermission, NewUser, NewWelcomeSettings, NewXpMultiplier, ReactionRole,
-    ReactionRoleMessage, ReactionRoleMessageItem, Result, Ticket, TicketMessage, TicketSettings,
-    TrackStats, TtsPermission, TtsSettings, UpdateAutoResponse, UpdateBotSettings,
-    UpdateCustomCommand, UpdateGuildTtsState, UpdateLevelSettings, UpdateModerationSettings,
-    UpdateMusicSettings, UpdateTicketSettings, UpdateTtsSettings, UpdateUser, UpdateWelcomeSettings,
-    User, UserLevel, WelcomeSettings, XpMultiplier,
+    NewReactionRole, NewReactionRoleMessage, NewReactionRoleMessageItem, NewSavedPlaylist,
+    NewTicket, NewTicketMessage, NewTtsPermission, NewUser, NewWelcomeSettings, NewXpMultiplier,
+    ReactionRole, ReactionRoleMessage, ReactionRoleMessageItem, Result, SavedPlaylist, Ticket,
+    TicketMessage, TicketSettings, TrackStats, TtsPermission, TtsSettings, UpdateAutoResponse,
+    UpdateBotSettings, UpdateCustomCommand, UpdateGuildTtsState, UpdateLevelSettings,
+    UpdateModerationSettings, UpdateMusicSettings, UpdateTicketSettings, UpdateTtsSettings,
+    UpdateUser, UpdateWelcomeSettings, User, UserLevel, WelcomeSettings, XpMultiplier,
 };
 use sqlx::SqlitePool;
 
@@ -744,6 +744,103 @@ impl MusicRepository {
         .await?;
 
         Ok(result)
+    }
+
+    pub async fn get_queue(&self, guild_id: &str) -> Result<Option<MusicQueue>> {
+        let queue = sqlx::query_as::<_, MusicQueue>(
+            "SELECT * FROM music_queues WHERE guild_id = ?"
+        )
+        .bind(guild_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(queue)
+    }
+
+    pub async fn save_queue(&self, guild_id: &str, queue_data: &str, current_index: i64) -> Result<()> {
+        let now = chrono::Utc::now().to_rfc3339();
+
+        sqlx::query(
+            r#"
+            INSERT INTO music_queues (guild_id, queue_data, current_index, updated_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(guild_id) DO UPDATE SET queue_data = ?, current_index = ?, updated_at = ?
+            "#
+        )
+        .bind(guild_id)
+        .bind(queue_data)
+        .bind(current_index)
+        .bind(&now)
+        .bind(queue_data)
+        .bind(current_index)
+        .bind(&now)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn clear_queue(&self, guild_id: &str) -> Result<()> {
+        sqlx::query("DELETE FROM music_queues WHERE guild_id = ?")
+            .bind(guild_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn get_playlist(&self, guild_id: &str, name: &str) -> Result<Option<SavedPlaylist>> {
+        let playlist = sqlx::query_as::<_, SavedPlaylist>(
+            "SELECT * FROM saved_playlists WHERE guild_id = ? AND name = ?"
+        )
+        .bind(guild_id)
+        .bind(name)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(playlist)
+    }
+
+    pub async fn list_playlists(&self, guild_id: &str) -> Result<Vec<SavedPlaylist>> {
+        let playlists = sqlx::query_as::<_, SavedPlaylist>(
+            "SELECT * FROM saved_playlists WHERE guild_id = ? ORDER BY name ASC"
+        )
+        .bind(guild_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(playlists)
+    }
+
+    pub async fn create_playlist(&self, playlist: NewSavedPlaylist) -> Result<SavedPlaylist> {
+        let now = chrono::Utc::now().to_rfc3339();
+
+        let result = sqlx::query(
+            "INSERT INTO saved_playlists (guild_id, name, tracks, created_by, created_at) VALUES (?, ?, ?, ?, ?)"
+        )
+        .bind(&playlist.guild_id)
+        .bind(&playlist.name)
+        .bind(&playlist.tracks)
+        .bind(&playlist.created_by)
+        .bind(&now)
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query_as::<_, SavedPlaylist>("SELECT * FROM saved_playlists WHERE id = ?")
+            .bind(result.last_insert_rowid())
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or_else(|| Error::NotFound("Playlist not found after insert".into()))
+    }
+
+    pub async fn delete_playlist(&self, guild_id: &str, name: &str) -> Result<()> {
+        sqlx::query("DELETE FROM saved_playlists WHERE guild_id = ? AND name = ?")
+            .bind(guild_id)
+            .bind(name)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
     }
 }
 
