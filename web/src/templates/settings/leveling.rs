@@ -75,9 +75,11 @@ pub fn leveling_settings(
 
             <div>
                 <label class="block text-gray-400 mb-2">Level-up Announcement Channel</label>
-                <input type="text" name="announce_channel_id" value="{}"
-                       class="w-full bg-gray-700 rounded-lg p-3 text-white"
-                       placeholder="Channel ID (leave empty to disable)">
+                <select name="announce_channel_id" id="channel-select" 
+                        class="w-full bg-gray-700 rounded-lg p-3 text-white">
+                    <option value="">-- Select a channel --</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1" id="channel-loading">Loading channels...</p>
             </div>
 
             <div>
@@ -103,6 +105,31 @@ pub fn leveling_settings(
         </div>
 
         <script>
+        (async () => {{
+            try {{
+                const res = await fetch('/api/guild/resources');
+                const data = await res.json();
+                
+                const select = document.getElementById('channel-select');
+                const loading = document.getElementById('channel-loading');
+                const currentChannel = "{}";
+                
+                data.channels.forEach(ch => {{
+                    const opt = document.createElement('option');
+                    opt.value = ch.id;
+                    opt.textContent = ch.icon + ' ' + ch.name;
+                    if (ch.id === currentChannel) opt.selected = true;
+                    select.appendChild(opt);
+                }});
+                
+                loading.textContent = data.channels.length + ' channels available';
+                loading.className = 'text-xs text-green-500 mt-1';
+            }} catch (err) {{
+                document.getElementById('channel-loading').textContent = 'Failed to load channels';
+                document.getElementById('channel-loading').className = 'text-xs text-red-500 mt-1';
+            }}
+        }})();
+
         document.getElementById('leveling-settings-form').addEventListener('submit', async (e) => {{
             e.preventDefault();
             const form = e.target;
@@ -142,9 +169,9 @@ pub fn leveling_settings(
         if enabled { "checked" } else { "" },
         xp_per_message,
         cooldown,
-        announce_channel,
         level_up_msg,
-        leaderboard_html
+        leaderboard_html,
+        announce_channel
     );
 
     settings_page("Leveling System", "leveling", &content)
