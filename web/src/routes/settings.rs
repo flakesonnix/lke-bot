@@ -7,7 +7,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
-use shared::UpdateBotSettings;
+use shared::{UpdateBotSettings, UpdateLevelSettings};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SettingsRequest {
@@ -15,6 +15,15 @@ pub struct SettingsRequest {
     pub activity_type: String,
     pub activity_name: String,
     pub activity_url: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LevelingSettingsRequest {
+    pub enabled: bool,
+    pub xp_per_message: i64,
+    pub cooldown_seconds: i64,
+    pub announce_channel_id: Option<String>,
+    pub level_up_message: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -100,6 +109,67 @@ pub async fn update_settings(
         Ok(_) => Json(SettingsResponse {
             success: true,
             message: "Settings updated successfully".to_string(),
+        })
+        .into_response(),
+        Err(e) => Json(SettingsResponse {
+            success: false,
+            message: format!("Failed to update settings: {}", e),
+        })
+        .into_response(),
+    }
+}
+
+pub async fn update_leveling_settings(
+    State(state): State<std::sync::Arc<AppState>>,
+    session: Session,
+    Json(payload): Json<LevelingSettingsRequest>,
+) -> Response<Body> {
+    let user: Option<DiscordUser> = session.get("user").await.ok().flatten();
+
+    let _user = match user {
+        Some(u) => u,
+        None => {
+            return Json(SettingsResponse {
+                success: false,
+                message: "Not authenticated".to_string(),
+            })
+            .into_response();
+        }
+    };
+
+    let guilds: Vec<crate::session::DiscordGuild> = session
+        .get("guilds")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+
+    let is_admin = guilds.iter().any(|g| g.has_admin() || g.is_owner());
+
+    if !is_admin {
+        return Json(SettingsResponse {
+            success: false,
+            message: "Admin permissions required".to_string(),
+        })
+        .into_response();
+    }
+
+    let guild_id = state.config.guild_id.unwrap_or(0).to_string();
+    let settings = UpdateLevelSettings {
+        xp_per_message: payload.xp_per_message,
+        xp_per_minute_voice: 5,
+        cooldown_seconds: payload.cooldown_seconds,
+        announce_channel_id: payload.announce_channel_id,
+        announce_dm: false,
+        rank_card_style: "default".to_string(),
+        level_up_message: payload.level_up_message,
+        enabled: payload.enabled,
+    };
+
+    match state.level_repo.update_settings(&guild_id, settings).await {
+        Ok(_) => Json(SettingsResponse {
+            success: true,
+            message: "Leveling settings updated successfully".to_string(),
         })
         .into_response(),
         Err(e) => Json(SettingsResponse {

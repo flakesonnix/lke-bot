@@ -4,8 +4,8 @@ mod templates;
 
 use axum::routing::{Router, get, post};
 use shared::{
-    BotSettingsRepository, Config, ModerationRepository, MusicRepository, TicketSettingsRepository,
-    TtsRepository, UserRepository, init_db,
+    BotSettingsRepository, Config, LevelRepository, ModerationRepository, MusicRepository, 
+    TicketSettingsRepository, TtsRepository, UserRepository, init_db,
 };
 use std::sync::Arc;
 use time::Duration;
@@ -19,6 +19,7 @@ pub struct AppState {
     pub moderation_repo: Arc<ModerationRepository>,
     pub tts_repo: Arc<TtsRepository>,
     pub music_repo: Arc<MusicRepository>,
+    pub level_repo: Arc<LevelRepository>,
     pub http_client: reqwest::Client,
 }
 
@@ -35,7 +36,8 @@ async fn main() -> anyhow::Result<()> {
     let ticket_settings_repo = Arc::new(TicketSettingsRepository::new(pool.clone()));
     let moderation_repo = Arc::new(ModerationRepository::new(pool.clone()));
     let tts_repo = Arc::new(TtsRepository::new(pool.clone()));
-    let music_repo = Arc::new(MusicRepository::new(pool));
+    let music_repo = Arc::new(MusicRepository::new(pool.clone()));
+    let level_repo = Arc::new(LevelRepository::new(pool));
 
     let http_client = reqwest::Client::new();
 
@@ -47,6 +49,7 @@ async fn main() -> anyhow::Result<()> {
         moderation_repo,
         tts_repo,
         music_repo,
+        level_repo,
         http_client,
     });
 
@@ -62,11 +65,13 @@ async fn main() -> anyhow::Result<()> {
         .route("/auth/callback", get(routes::auth_callback))
         .route("/dashboard", get(routes::dashboard))
         .route("/settings/bot", get(routes::bot_settings))
+        .route("/settings/leveling", get(routes::leveling_settings))
         .route("/settings/tickets", get(routes::ticket_settings))
         .route("/settings/moderation", get(routes::moderation_settings))
         .route("/settings/tts", get(routes::tts_settings))
         .route("/settings/music", get(routes::music_settings))
         .route("/api/settings", post(routes::update_settings))
+        .route("/api/leveling/settings", post(routes::update_leveling_settings))
         .route("/api/ping", get(routes::ping))
         .route("/logout", get(routes::logout))
         .layer(session_layer)
