@@ -1,6 +1,5 @@
-use crate::{Context, Error};
+use crate::Error;
 use poise::serenity_prelude::{Message, GuildId, UserId};
-use shared::repository::LevelRepository;
 
 pub struct LevelingHandler;
 
@@ -87,7 +86,7 @@ impl LevelingHandler {
                 let member = guild_id.member(&ctx.http, user_id).await?;
                 
                 if !member.roles.contains(&role) {
-                    guild_id.edit_member(&ctx.http, user_id, |m| m.add_role(role)).await?;
+                    member.add_role(&ctx.http, role).await?;
                 }
             }
         }
