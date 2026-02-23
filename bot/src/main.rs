@@ -14,17 +14,19 @@ use std::time::Duration;
 use tokio::sync::watch;
 
 use shared::{
-    config::Config, db, repository::{BotSettingsRepository, LevelRepository, ModerationRepository, WelcomeRepository},
+    config::Config, db, repository::{AutoResponseRepository, BotSettingsRepository, CustomCommandRepository, LevelRepository, ModerationRepository, WelcomeRepository},
     BotSettings,
 };
 
-use events::{AutoModHandler, LevelingHandler, WelcomeHandler};
+use events::{AutoModHandler, AutoResponseHandler, CustomCommandHandler, LevelingHandler, WelcomeHandler};
 
 pub struct BotState {
     pub settings_repo: BotSettingsRepository,
     pub level_repo: LevelRepository,
     pub welcome_repo: WelcomeRepository,
     pub moderation_repo: ModerationRepository,
+    pub custom_cmd_repo: CustomCommandRepository,
+    pub auto_resp_repo: AutoResponseRepository,
     pub activity_rx: watch::Receiver<Option<ActivityData>>,
 }
 
@@ -41,6 +43,8 @@ async fn event_handler(
     match event {
         FullEvent::Message { new_message } => {
             AutoModHandler::handle_message(ctx, new_message, data).await?;
+            AutoResponseHandler::handle_message(ctx, new_message, data).await?;
+            CustomCommandHandler::handle_message(ctx, new_message, data).await?;
             LevelingHandler::handle_message(ctx, new_message, data).await?;
         }
         FullEvent::GuildMemberAddition { new_member } => {
@@ -156,6 +160,15 @@ async fn main() -> Result<()> {
                 commands::automod_warnings(),
                 commands::warn(),
                 commands::warnings(),
+                commands::cmd_create(),
+                commands::cmd_delete(),
+                commands::cmd_list(),
+                commands::cmd_edit(),
+                commands::cmd_toggle(),
+                commands::autoresp_add(),
+                commands::autoresp_delete(),
+                commands::autoresp_list(),
+                commands::autoresp_toggle(),
             ],
             prefix_options: PrefixFrameworkOptions {
                 prefix: Some("!".into()),
@@ -215,6 +228,8 @@ async fn main() -> Result<()> {
                     level_repo: LevelRepository::new(pool.clone()),
                     welcome_repo: WelcomeRepository::new(pool.clone()),
                     moderation_repo: ModerationRepository::new(pool.clone()),
+                    custom_cmd_repo: CustomCommandRepository::new(pool.clone()),
+                    auto_resp_repo: AutoResponseRepository::new(pool.clone()),
                     activity_rx,
                 }))
             })

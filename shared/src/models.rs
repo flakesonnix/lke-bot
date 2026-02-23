@@ -435,3 +435,119 @@ pub struct UpdateWelcomeSettings {
     pub auto_role_id: Option<String>,
     pub welcome_card_enabled: bool,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CustomCommand {
+    pub id: i64,
+    pub guild_id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub response: String,
+    pub embed_title: Option<String>,
+    pub embed_description: Option<String>,
+    pub embed_color: Option<i64>,
+    pub embed_image_url: Option<String>,
+    pub embed_thumbnail_url: Option<String>,
+    pub created_by: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub enabled: bool,
+    pub cooldown_seconds: i64,
+    pub require_permissions: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewCustomCommand {
+    pub guild_id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub response: String,
+    pub embed_title: Option<String>,
+    pub embed_description: Option<String>,
+    pub embed_color: Option<i64>,
+    pub embed_image_url: Option<String>,
+    pub embed_thumbnail_url: Option<String>,
+    pub created_by: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateCustomCommand {
+    pub description: Option<String>,
+    pub response: String,
+    pub embed_title: Option<String>,
+    pub embed_description: Option<String>,
+    pub embed_color: Option<i64>,
+    pub embed_image_url: Option<String>,
+    pub embed_thumbnail_url: Option<String>,
+    pub enabled: bool,
+    pub cooldown_seconds: i64,
+    pub require_permissions: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct AutoResponse {
+    pub id: i64,
+    pub guild_id: String,
+    pub trigger_type: String,
+    pub trigger_pattern: String,
+    pub response: String,
+    pub response_type: String,
+    pub embed_title: Option<String>,
+    pub embed_description: Option<String>,
+    pub embed_color: Option<i64>,
+    pub created_by: String,
+    pub created_at: String,
+    pub enabled: bool,
+    pub case_sensitive: bool,
+    pub cooldown_seconds: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewAutoResponse {
+    pub guild_id: String,
+    pub trigger_type: String,
+    pub trigger_pattern: String,
+    pub response: String,
+    pub response_type: String,
+    pub embed_title: Option<String>,
+    pub embed_description: Option<String>,
+    pub embed_color: Option<i64>,
+    pub created_by: String,
+    pub case_sensitive: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateAutoResponse {
+    pub trigger_type: String,
+    pub trigger_pattern: String,
+    pub response: String,
+    pub response_type: String,
+    pub embed_title: Option<String>,
+    pub embed_description: Option<String>,
+    pub embed_color: Option<i64>,
+    pub enabled: bool,
+    pub case_sensitive: bool,
+    pub cooldown_seconds: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CommandPermission {
+    pub id: i64,
+    pub guild_id: String,
+    pub command_type: String,
+    pub command_id: i64,
+    pub role_id: Option<String>,
+    pub user_id: Option<String>,
+    pub allowed: bool,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewCommandPermission {
+    pub guild_id: String,
+    pub command_type: String,
+    pub command_id: i64,
+    pub role_id: Option<String>,
+    pub user_id: Option<String>,
+    pub allowed: bool,
+}
