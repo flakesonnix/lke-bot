@@ -25,27 +25,31 @@ pub fn ticket_settings(settings: Option<TicketSettings>) -> Html<String> {
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-gray-400 mb-2">Category ID</label>
-                    <input type="text" name="category_id" value="{}" 
-                           class="w-full bg-gray-700 rounded-lg p-3 text-white" 
-                           placeholder="Channel category for tickets">
-                    <p class="text-xs text-gray-500 mt-1">Tickets will be created in this category</p>
+                    <label class="block text-gray-400 mb-2">Log Channel</label>
+                    <select name="log_channel_id" id="log-channel-select" 
+                            class="w-full bg-gray-700 rounded-lg p-3 text-white">
+                        <option value="">-- Select a channel --</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1" id="log-channel-loading">Loading channels...</p>
                 </div>
 
                 <div>
-                    <label class="block text-gray-400 mb-2">Support Role ID</label>
-                    <input type="text" name="support_role_id" value="{}" 
-                           class="w-full bg-gray-700 rounded-lg p-3 text-white" 
-                           placeholder="Role that can manage tickets">
+                    <label class="block text-gray-400 mb-2">Support Role</label>
+                    <select name="support_role_id" id="support-role-select" 
+                            class="w-full bg-gray-700 rounded-lg p-3 text-white">
+                        <option value="">-- Select a role --</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1" id="role-loading">Loading roles...</p>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-gray-400 mb-2">Log Channel ID</label>
-                    <input type="text" name="log_channel_id" value="{}" 
+                    <label class="block text-gray-400 mb-2">Category ID</label>
+                    <input type="text" name="category_id" value="{}" 
                            class="w-full bg-gray-700 rounded-lg p-3 text-white" 
-                           placeholder="Channel for ticket logs">
+                           placeholder="Channel category for tickets">
+                    <p class="text-xs text-gray-500 mt-1">Tickets will be created in this category</p>
                 </div>
 
                 <div>
@@ -67,15 +71,57 @@ pub fn ticket_settings(settings: Option<TicketSettings>) -> Html<String> {
                 </ul>
             </div>
 
+            <div id="result" class="hidden p-4 rounded-lg"></div>
+
             <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 px-6 py-3 rounded-lg font-medium transition">
                 Save Ticket Settings
             </button>
-        </form>"#,
+        </form>
+
+        <script>
+        (async () => {{
+            try {{
+                const res = await fetch('/api/guild/resources');
+                const data = await res.json();
+                
+                const channelSelect = document.getElementById('log-channel-select');
+                const roleSelect = document.getElementById('support-role-select');
+                const currentChannel = "{}";
+                const currentRole = "{}";
+                
+                data.channels.forEach(ch => {{
+                    const opt = document.createElement('option');
+                    opt.value = ch.id;
+                    opt.textContent = ch.icon + ' ' + ch.name;
+                    if (ch.id === currentChannel) opt.selected = true;
+                    channelSelect.appendChild(opt);
+                }});
+                
+                document.getElementById('log-channel-loading').textContent = data.channels.length + ' channels available';
+                document.getElementById('log-channel-loading').className = 'text-xs text-green-500 mt-1';
+                
+                data.roles.sort((a, b) => b.position - a.position).forEach(r => {{
+                    const opt = document.createElement('option');
+                    opt.value = r.id;
+                    opt.textContent = r.name;
+                    opt.style.color = r.color;
+                    if (r.id === currentRole) opt.selected = true;
+                    roleSelect.appendChild(opt);
+                }});
+                
+                document.getElementById('role-loading').textContent = data.roles.length + ' roles available';
+                document.getElementById('role-loading').className = 'text-xs text-green-500 mt-1';
+            }} catch (err) {{
+                document.getElementById('log-channel-loading').textContent = 'Failed to load channels';
+                document.getElementById('role-loading').textContent = 'Failed to load roles';
+            }}
+        }})();
+        </script>"#,
         if enabled { "checked" } else { "" },
         category_id,
-        support_role_id,
+        max_days,
         log_channel_id,
-        max_days
+        support_role_id
     );
 
     settings_page("Ticket System", "tickets", &content)
