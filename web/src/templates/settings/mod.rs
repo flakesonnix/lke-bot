@@ -1,10 +1,12 @@
 mod bot;
+mod leveling;
 mod moderation;
 mod music;
 mod tickets;
 mod tts;
 
 pub use bot::bot_settings;
+pub use leveling::leveling_settings;
 pub use moderation::moderation_settings;
 pub use music::music_settings;
 pub use tickets::ticket_settings;
@@ -17,6 +19,7 @@ pub fn nav(active: &str) -> String {
     let items = [
         ("dashboard", "Dashboard", "/dashboard"),
         ("bot", "Bot Activity", "/settings/bot"),
+        ("leveling", "Leveling", "/settings/leveling"),
         ("tickets", "Tickets", "/settings/tickets"),
         ("moderation", "Moderation", "/settings/moderation"),
         ("tts", "Text-to-Speech", "/settings/tts"),
