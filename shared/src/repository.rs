@@ -3,12 +3,13 @@ use crate::{
     Error, GuildTtsState, LevelReward, LevelSettings, ModerationSettings, ModerationWarning,
     MusicSettings, MusicStat, NewAutoResponse, NewCommandPermission, NewCustomCommand,
     NewCustomTranslation, NewLevelReward, NewLevelSettings, NewModerationWarning, NewMusicStat,
-    NewTicket, NewTicketMessage, NewTtsPermission, NewUser, NewWelcomeSettings, NewXpMultiplier,
-    Result, Ticket, TicketMessage, TicketSettings, TrackStats, TtsPermission, TtsSettings,
-    UpdateAutoResponse, UpdateBotSettings, UpdateCustomCommand, UpdateGuildTtsState,
-    UpdateLevelSettings, UpdateModerationSettings, UpdateMusicSettings, UpdateTicketSettings,
-    UpdateTtsSettings, UpdateUser, UpdateWelcomeSettings, User, UserLevel, WelcomeSettings,
-    XpMultiplier,
+    NewReactionRole, NewReactionRoleMessage, NewReactionRoleMessageItem, NewTicket, NewTicketMessage,
+    NewTtsPermission, NewUser, NewWelcomeSettings, NewXpMultiplier, ReactionRole,
+    ReactionRoleMessage, ReactionRoleMessageItem, Result, Ticket, TicketMessage, TicketSettings,
+    TrackStats, TtsPermission, TtsSettings, UpdateAutoResponse, UpdateBotSettings,
+    UpdateCustomCommand, UpdateGuildTtsState, UpdateLevelSettings, UpdateModerationSettings,
+    UpdateMusicSettings, UpdateTicketSettings, UpdateTtsSettings, UpdateUser, UpdateWelcomeSettings,
+    User, UserLevel, WelcomeSettings, XpMultiplier,
 };
 use sqlx::SqlitePool;
 
@@ -1448,5 +1449,200 @@ impl CommandPermissionRepository {
         }
 
         Ok(false)
+    }
+}
+
+pub struct ReactionRoleRepository {
+    pool: SqlitePool,
+}
+
+impl ReactionRoleRepository {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn get(&self, guild_id: &str, emoji: &str) -> Result<Option<ReactionRole>> {
+        let rr = sqlx::query_as::<_, ReactionRole>(
+            "SELECT * FROM reaction_roles WHERE guild_id = ? AND emoji = ?"
+        )
+        .bind(guild_id)
+        .bind(emoji)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(rr)
+    }
+
+    pub async fn get_by_id(&self, id: i64) -> Result<Option<ReactionRole>> {
+        let rr = sqlx::query_as::<_, ReactionRole>("SELECT * FROM reaction_roles WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        Ok(rr)
+    }
+
+    pub async fn list(&self, guild_id: &str) -> Result<Vec<ReactionRole>> {
+        let rrs = sqlx::query_as::<_, ReactionRole>(
+            "SELECT * FROM reaction_roles WHERE guild_id = ? ORDER BY emoji ASC"
+        )
+        .bind(guild_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rrs)
+    }
+
+    pub async fn create(&self, rr: NewReactionRole) -> Result<ReactionRole> {
+        let now = chrono::Utc::now().to_rfc3339();
+
+        let result = sqlx::query(
+            "INSERT INTO reaction_roles (guild_id, role_id, emoji, description, created_at, enabled) VALUES (?, ?, ?, ?, ?, 1)"
+        )
+        .bind(&rr.guild_id)
+        .bind(&rr.role_id)
+        .bind(&rr.emoji)
+        .bind(&rr.description)
+        .bind(&now)
+        .execute(&self.pool)
+        .await?;
+
+        self.get_by_id(result.last_insert_rowid())
+            .await?
+            .ok_or_else(|| Error::NotFound("Reaction role not found after insert".into()))
+    }
+
+    pub async fn delete(&self, id: i64) -> Result<()> {
+        sqlx::query("DELETE FROM reaction_roles WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn set_enabled(&self, id: i64, enabled: bool) -> Result<()> {
+        sqlx::query("UPDATE reaction_roles SET enabled = ? WHERE id = ?")
+            .bind(enabled)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn get_message(&self, channel_id: &str, message_id: &str) -> Result<Option<ReactionRoleMessage>> {
+        let msg = sqlx::query_as::<_, ReactionRoleMessage>(
+            "SELECT * FROM reaction_role_messages WHERE channel_id = ? AND message_id = ?"
+        )
+        .bind(channel_id)
+        .bind(message_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(msg)
+    }
+
+    pub async fn get_message_by_id(&self, id: i64) -> Result<Option<ReactionRoleMessage>> {
+        let msg = sqlx::query_as::<_, ReactionRoleMessage>("SELECT * FROM reaction_role_messages WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        Ok(msg)
+    }
+
+    pub async fn list_messages(&self, guild_id: &str) -> Result<Vec<ReactionRoleMessage>> {
+        let msgs = sqlx::query_as::<_, ReactionRoleMessage>(
+            "SELECT * FROM reaction_role_messages WHERE guild_id = ? ORDER BY created_at DESC"
+        )
+        .bind(guild_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(msgs)
+    }
+
+    pub async fn create_message(&self, msg: NewReactionRoleMessage) -> Result<ReactionRoleMessage> {
+        let now = chrono::Utc::now().to_rfc3339();
+
+        let result = sqlx::query(
+            "INSERT INTO reaction_role_messages (guild_id, channel_id, message_id, title, description, color, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        )
+        .bind(&msg.guild_id)
+        .bind(&msg.channel_id)
+        .bind(&msg.message_id)
+        .bind(&msg.title)
+        .bind(&msg.description)
+        .bind(msg.color)
+        .bind(&msg.created_by)
+        .bind(&now)
+        .execute(&self.pool)
+        .await?;
+
+        self.get_message_by_id(result.last_insert_rowid())
+            .await?
+            .ok_or_else(|| Error::NotFound("Reaction role message not found after insert".into()))
+    }
+
+    pub async fn delete_message(&self, id: i64) -> Result<()> {
+        sqlx::query("DELETE FROM reaction_role_messages WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn add_item(&self, item: NewReactionRoleMessageItem) -> Result<ReactionRoleMessageItem> {
+        let result = sqlx::query(
+            "INSERT INTO reaction_role_message_items (message_id, reaction_role_id) VALUES (?, ?)"
+        )
+        .bind(item.message_id)
+        .bind(item.reaction_role_id)
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query_as::<_, ReactionRoleMessageItem>("SELECT * FROM reaction_role_message_items WHERE id = ?")
+            .bind(result.last_insert_rowid())
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or_else(|| Error::NotFound("Reaction role message item not found after insert".into()))
+    }
+
+    pub async fn remove_item(&self, message_id: i64, reaction_role_id: i64) -> Result<()> {
+        sqlx::query("DELETE FROM reaction_role_message_items WHERE message_id = ? AND reaction_role_id = ?")
+            .bind(message_id)
+            .bind(reaction_role_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn get_message_items(&self, message_id: i64) -> Result<Vec<ReactionRoleMessageItem>> {
+        let items = sqlx::query_as::<_, ReactionRoleMessageItem>(
+            "SELECT * FROM reaction_role_message_items WHERE message_id = ?"
+        )
+        .bind(message_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(items)
+    }
+
+    pub async fn get_reaction_roles_for_message(&self, message_id: i64) -> Result<Vec<ReactionRole>> {
+        let rrs = sqlx::query_as::<_, ReactionRole>(
+            r#"
+            SELECT rr.* FROM reaction_roles rr
+            JOIN reaction_role_message_items rri ON rr.id = rri.reaction_role_id
+            WHERE rri.message_id = ?
+            "#
+        )
+        .bind(message_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rrs)
     }
 }

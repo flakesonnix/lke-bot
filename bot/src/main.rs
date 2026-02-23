@@ -14,11 +14,11 @@ use std::time::Duration;
 use tokio::sync::watch;
 
 use shared::{
-    config::Config, db, repository::{AutoResponseRepository, BotSettingsRepository, CustomCommandRepository, LevelRepository, ModerationRepository, WelcomeRepository},
+    config::Config, db, repository::{AutoResponseRepository, BotSettingsRepository, CustomCommandRepository, LevelRepository, ModerationRepository, ReactionRoleRepository, WelcomeRepository},
     BotSettings,
 };
 
-use events::{AutoModHandler, AutoResponseHandler, CustomCommandHandler, LevelingHandler, WelcomeHandler};
+use events::{AutoModHandler, AutoResponseHandler, CustomCommandHandler, LevelingHandler, ReactionRoleHandler, WelcomeHandler};
 
 pub struct BotState {
     pub settings_repo: BotSettingsRepository,
@@ -27,6 +27,7 @@ pub struct BotState {
     pub moderation_repo: ModerationRepository,
     pub custom_cmd_repo: CustomCommandRepository,
     pub auto_resp_repo: AutoResponseRepository,
+    pub reaction_role_repo: ReactionRoleRepository,
     pub activity_rx: watch::Receiver<Option<ActivityData>>,
 }
 
@@ -52,6 +53,12 @@ async fn event_handler(
         }
         FullEvent::GuildMemberRemoval { guild_id, user, .. } => {
             WelcomeHandler::handle_member_leave(ctx, *guild_id, user, data).await?;
+        }
+        FullEvent::ReactionAdd { add_reaction } => {
+            ReactionRoleHandler::handle_reaction_add(ctx, add_reaction, data).await?;
+        }
+        FullEvent::ReactionRemove { removed_reaction } => {
+            ReactionRoleHandler::handle_reaction_remove(ctx, removed_reaction, data).await?;
         }
         _ => {}
     }
@@ -169,6 +176,14 @@ async fn main() -> Result<()> {
                 commands::autoresp_delete(),
                 commands::autoresp_list(),
                 commands::autoresp_toggle(),
+                commands::rr_create(),
+                commands::rr_delete(),
+                commands::rr_list(),
+                commands::rr_toggle(),
+                commands::rrmsg_create(),
+                commands::rrmsg_add(),
+                commands::rrmsg_remove(),
+                commands::rrmsg_list(),
             ],
             prefix_options: PrefixFrameworkOptions {
                 prefix: Some("!".into()),
@@ -230,6 +245,7 @@ async fn main() -> Result<()> {
                     moderation_repo: ModerationRepository::new(pool.clone()),
                     custom_cmd_repo: CustomCommandRepository::new(pool.clone()),
                     auto_resp_repo: AutoResponseRepository::new(pool.clone()),
+                    reaction_role_repo: ReactionRoleRepository::new(pool.clone()),
                     activity_rx,
                 }))
             })

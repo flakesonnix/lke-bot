@@ -3,6 +3,7 @@ mod custom_commands;
 mod help;
 mod leveling;
 mod ping;
+mod reaction_roles;
 mod roll;
 mod userinfo;
 
@@ -17,5 +18,8 @@ pub use custom_commands::{
 pub use help::help;
 pub use leveling::{addxp, leaderboard, rank, setxp};
 pub use ping::ping;
+pub use reaction_roles::{
+    rr_create, rr_delete, rr_list, rr_toggle, rrmsg_add, rrmsg_create, rrmsg_list, rrmsg_remove,
+};
 pub use roll::roll;
 pub use userinfo::userinfo;

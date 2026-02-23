@@ -551,3 +551,59 @@ pub struct NewCommandPermission {
     pub user_id: Option<String>,
     pub allowed: bool,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ReactionRole {
+    pub id: i64,
+    pub guild_id: String,
+    pub role_id: String,
+    pub emoji: String,
+    pub description: Option<String>,
+    pub created_at: String,
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewReactionRole {
+    pub guild_id: String,
+    pub role_id: String,
+    pub emoji: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ReactionRoleMessage {
+    pub id: i64,
+    pub guild_id: String,
+    pub channel_id: String,
+    pub message_id: String,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub color: Option<i64>,
+    pub created_by: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewReactionRoleMessage {
+    pub guild_id: String,
+    pub channel_id: String,
+    pub message_id: String,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub color: Option<i64>,
+    pub created_by: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ReactionRoleMessageItem {
+    pub id: i64,
+    pub message_id: i64,
+    pub reaction_role_id: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewReactionRoleMessageItem {
+    pub message_id: i64,
+    pub reaction_role_id: i64,
+}
