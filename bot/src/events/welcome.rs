@@ -1,6 +1,5 @@
-use crate::{Context, Error};
+use crate::Error;
 use poise::serenity_prelude::{GuildId, Member, User};
-use shared::repository::WelcomeRepository;
 
 pub struct WelcomeHandler;
 
@@ -22,7 +21,7 @@ impl WelcomeHandler {
         let message = Self::replace_placeholders(&settings.welcome_message, &guild_id, user);
 
         if settings.welcome_dm {
-            if let Err(e) = user.direct_message(&ctx.http, |m| m.content(&message)).await {
+            if let Err(e) = user.direct_message(&ctx.http, poise::serenity_prelude::CreateMessage::new().content(&message)).await {
                 eprintln!("Failed to send welcome DM: {}", e);
             }
         }
@@ -39,7 +38,7 @@ impl WelcomeHandler {
         if let Some(ref role_id) = settings.auto_role_id {
             if let Ok(r_id) = role_id.parse::<u64>() {
                 let role = poise::serenity_prelude::RoleId::new(r_id);
-                if let Err(e) = guild_id.edit_member(&ctx.http, user.id, |m| m.add_role(role)).await {
+                if let Err(e) = member.add_role(&ctx.http, role).await {
                     eprintln!("Failed to add auto role: {}", e);
                 }
             }
@@ -81,7 +80,7 @@ impl WelcomeHandler {
             .replace("{user.discriminator}", &user.discriminator.map(|d| d.to_string()).unwrap_or_default())
             .replace("{user.id}", &user.id.to_string())
             .replace("{user.avatar}", &user.avatar_url().unwrap_or_default())
-            .replace("{server}", &guild_id.to_partial_guild(|g| g.name).unwrap_or_default())
+            .replace("{server}", "Server")
             .replace("{server.id}", &guild_id.to_string())
     }
 }

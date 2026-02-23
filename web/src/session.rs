@@ -52,6 +52,48 @@ impl DiscordGuild {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiscordChannel {
+    pub id: String,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub channel_type: i32,
+}
+
+impl DiscordChannel {
+    pub fn is_text(&self) -> bool {
+        self.channel_type == 0
+    }
+
+    pub fn is_voice(&self) -> bool {
+        self.channel_type == 2
+    }
+
+    pub fn type_icon(&self) -> &'static str {
+        match self.channel_type {
+            0 => "💬",
+            2 => "🔊",
+            4 => "📁",
+            5 => "📢",
+            _ => "#",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiscordRole {
+    pub id: String,
+    pub name: String,
+    pub color: u32,
+    pub position: i32,
+}
+
+impl DiscordRole {
+    pub fn color_hex(&self) -> String {
+        format!("#{:06x}", self.color)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiscordTokenResponse {
     pub access_token: String,
     pub token_type: String,

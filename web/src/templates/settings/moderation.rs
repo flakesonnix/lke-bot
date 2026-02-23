@@ -56,16 +56,20 @@ pub fn moderation_settings(settings: Option<ModerationSettings>) -> Html<String>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-gray-400 mb-2">Log Channel ID</label>
-                    <input type="text" name="log_channel_id" value="{}" 
-                           class="w-full bg-gray-700 rounded-lg p-3 text-white" 
-                           placeholder="Channel for moderation logs">
+                    <label class="block text-gray-400 mb-2">Log Channel</label>
+                    <select name="log_channel_id" id="log-channel-select" 
+                            class="w-full bg-gray-700 rounded-lg p-3 text-white">
+                        <option value="">-- Select a channel --</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1" id="channel-loading">Loading channels...</p>
                 </div>
                 <div>
-                    <label class="block text-gray-400 mb-2">Mute Role ID</label>
-                    <input type="text" name="mute_role_id" value="{}" 
-                           class="w-full bg-gray-700 rounded-lg p-3 text-white" 
-                           placeholder="Role to assign when muted">
+                    <label class="block text-gray-400 mb-2">Mute Role</label>
+                    <select name="mute_role_id" id="mute-role-select" 
+                            class="w-full bg-gray-700 rounded-lg p-3 text-white">
+                        <option value="">-- Select a role --</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1" id="role-loading">Loading roles...</p>
                 </div>
             </div>
 
@@ -91,20 +95,62 @@ pub fn moderation_settings(settings: Option<ModerationSettings>) -> Html<String>
                 </div>
             </div>
 
+            <div id="result" class="hidden p-4 rounded-lg"></div>
+
             <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 px-6 py-3 rounded-lg font-medium transition">
                 Save Moderation Settings
             </button>
-        </form>"#,
+        </form>
+
+        <script>
+        (async () => {{
+            try {{
+                const res = await fetch('/api/guild/resources');
+                const data = await res.json();
+                
+                const channelSelect = document.getElementById('log-channel-select');
+                const roleSelect = document.getElementById('mute-role-select');
+                const currentChannel = "{}";
+                const currentRole = "{}";
+                
+                data.channels.forEach(ch => {{
+                    const opt = document.createElement('option');
+                    opt.value = ch.id;
+                    opt.textContent = ch.icon + ' ' + ch.name;
+                    if (ch.id === currentChannel) opt.selected = true;
+                    channelSelect.appendChild(opt);
+                }});
+                
+                document.getElementById('channel-loading').textContent = data.channels.length + ' channels available';
+                document.getElementById('channel-loading').className = 'text-xs text-green-500 mt-1';
+                
+                data.roles.sort((a, b) => b.position - a.position).forEach(r => {{
+                    const opt = document.createElement('option');
+                    opt.value = r.id;
+                    opt.textContent = r.name;
+                    opt.style.color = r.color;
+                    if (r.id === currentRole) opt.selected = true;
+                    roleSelect.appendChild(opt);
+                }});
+                
+                document.getElementById('role-loading').textContent = data.roles.length + ' roles available';
+                document.getElementById('role-loading').className = 'text-xs text-green-500 mt-1';
+            }} catch (err) {{
+                document.getElementById('channel-loading').textContent = 'Failed to load channels';
+                document.getElementById('role-loading').textContent = 'Failed to load roles';
+            }}
+        }})();
+        </script>"#,
         if enabled { "checked" } else { "" },
         if check_bad_words { "checked" } else { "" },
         if check_bad_names { "checked" } else { "" },
         if check_nsfw { "checked" } else { "" },
-        log_channel,
-        mute_role,
         warn_threshold,
         if language == "en" { "selected" } else { "" },
         if language == "de" { "selected" } else { "" },
-        if auto_mute { "checked" } else { "" }
+        if auto_mute { "checked" } else { "" },
+        log_channel,
+        mute_role
     );
 
     settings_page("Moderation", "moderation", &content)

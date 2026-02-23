@@ -1,7 +1,9 @@
 //! Bot entry point – Poise slash command handling
 
 use anyhow::Result;
-use poise::serenity_prelude::{ActivityData, ChannelId, GatewayIntents, GuildId, OnlineStatus};
+use poise::serenity_prelude::{
+    ActivityData, ChannelId, FullEvent, GatewayIntents, GuildId, OnlineStatus,
+};
 use poise::{self, FrameworkOptions, PrefixFrameworkOptions};
 use songbird::SerenityInit;
 use std::collections::hash_map::DefaultHasher;
@@ -16,6 +18,8 @@ use shared::{
     BotSettings,
 };
 
+use events::{LevelingHandler, WelcomeHandler};
+
 pub struct BotState {
     pub settings_repo: BotSettingsRepository,
     pub level_repo: LevelRepository,
@@ -26,6 +30,27 @@ pub struct BotState {
 pub type Data = Arc<BotState>;
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Context<'a> = poise::Context<'a, Data, Error>;
+
+async fn event_handler(
+    ctx: &poise::serenity_prelude::Context,
+    event: &FullEvent,
+    _framework: poise::FrameworkContext<'_, Data, Error>,
+    data: &Data,
+) -> Result<(), Error> {
+    match event {
+        FullEvent::Message { new_message } => {
+            LevelingHandler::handle_message(ctx, new_message, data).await?;
+        }
+        FullEvent::GuildMemberAddition { new_member } => {
+            WelcomeHandler::handle_member_join(ctx, new_member, data).await?;
+        }
+        FullEvent::GuildMemberRemoval { guild_id, user, .. } => {
+            WelcomeHandler::handle_member_leave(ctx, *guild_id, user, data).await?;
+        }
+        _ => {}
+    }
+    Ok(())
+}
 
 fn settings_to_activity(settings: &BotSettings) -> Option<ActivityData> {
     if !settings.activity_enabled {
@@ -90,6 +115,10 @@ async fn activity_watcher(
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
+    
     dotenvy::dotenv().ok();
 
     let cfg = Config::from_env();
@@ -113,10 +142,17 @@ async fn main() -> Result<()> {
                 commands::userinfo(),
                 commands::help(),
                 commands::roll(),
+                commands::rank(),
+                commands::leaderboard(),
+                commands::setxp(),
+                commands::addxp(),
             ],
             prefix_options: PrefixFrameworkOptions {
                 prefix: Some("!".into()),
                 ..Default::default()
+            },
+            event_handler: |ctx, event, framework, data| {
+                Box::pin(event_handler(ctx, event, framework, data))
             },
             ..Default::default()
         })
@@ -166,13 +202,17 @@ async fn main() -> Result<()> {
 
                 Ok(Arc::new(BotState {
                     settings_repo: BotSettingsRepository::new(pool.clone()),
+                    level_repo: LevelRepository::new(pool.clone()),
+                    welcome_repo: WelcomeRepository::new(pool.clone()),
                     activity_rx,
                 }))
             })
         })
         .build();
 
-    let intents = GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT;
+    let intents = GatewayIntents::non_privileged() 
+        | GatewayIntents::MESSAGE_CONTENT 
+        | GatewayIntents::GUILD_MEMBERS;
 
     let mut client = poise::serenity_prelude::ClientBuilder::new(&cfg.discord_token, intents)
         .framework(framework)
@@ -184,3 +224,4 @@ async fn main() -> Result<()> {
 }
 
 mod commands;
+mod events;
