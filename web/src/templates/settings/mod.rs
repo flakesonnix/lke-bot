@@ -4,6 +4,7 @@ mod moderation;
 mod music;
 mod tickets;
 mod tts;
+mod welcome;
 
 pub use bot::bot_settings;
 pub use leveling::leveling_settings;
@@ -11,6 +12,7 @@ pub use moderation::moderation_settings;
 pub use music::music_settings;
 pub use tickets::ticket_settings;
 pub use tts::tts_settings;
+pub use welcome::welcome_settings;
 
 use crate::templates::base_html;
 use axum::response::Html;
@@ -20,6 +22,7 @@ pub fn nav(active: &str) -> String {
         ("dashboard", "Dashboard", "/dashboard"),
         ("bot", "Bot Activity", "/settings/bot"),
         ("leveling", "Leveling", "/settings/leveling"),
+        ("welcome", "Welcome", "/settings/welcome"),
         ("tickets", "Tickets", "/settings/tickets"),
         ("moderation", "Moderation", "/settings/moderation"),
         ("tts", "Text-to-Speech", "/settings/tts"),
