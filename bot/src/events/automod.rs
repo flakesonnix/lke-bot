@@ -1,6 +1,6 @@
 use crate::Error;
 use poise::serenity_prelude::{Mentionable, Message};
-use rustrict::Censor;
+use rustrict::CensorStr;
 
 pub struct AutoModHandler;
 
@@ -28,16 +28,14 @@ impl AutoModHandler {
         let mut warn_reason = String::new();
 
         if settings.check_bad_words {
-            let censor_result = Censor::from_str(&msg.content);
-            if censor_result.is_bad() {
+            if msg.content.is_inappropriate() {
                 should_delete = true;
                 warn_reason = "Inappropriate language".to_string();
             }
         }
 
         if settings.check_bad_names {
-            let censor_result = Censor::from_str(&msg.author.name);
-            if censor_result.is_bad() {
+            if msg.author.name.is_inappropriate() {
                 should_delete = true;
                 warn_reason = "Inappropriate username".to_string();
             }
@@ -82,12 +80,13 @@ impl AutoModHandler {
                 }
             }
 
-            if let Err(e) = msg.author.direct_message(&ctx.http, |m| {
-                m.content(&format!(
+            if let Err(e) = msg.author.direct_message(
+                &ctx.http,
+                poise::serenity_prelude::CreateMessage::new().content(&format!(
                     "⚠️ Your message was removed: {}",
                     warn_reason
                 ))
-            }).await {
+            ).await {
                 eprintln!("Failed to send DM: {}", e);
             }
         }

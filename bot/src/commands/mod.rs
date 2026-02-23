@@ -1,9 +1,14 @@
+mod automod;
 mod help;
 mod leveling;
 mod ping;
 mod roll;
 mod userinfo;
 
+pub use automod::{
+    automod_filters, automod_logchannel, automod_muterole, automod_settings, automod_toggle,
+    automod_warnings, warn, warnings,
+};
 pub use help::help;
 pub use leveling::{addxp, leaderboard, rank, setxp};
 pub use ping::ping;
