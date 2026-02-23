@@ -5,7 +5,7 @@ mod templates;
 use axum::routing::{Router, get, post};
 use shared::{
     BotSettingsRepository, Config, LevelRepository, ModerationRepository, MusicRepository, 
-    TicketSettingsRepository, TtsRepository, UserRepository, init_db,
+    TicketSettingsRepository, TtsRepository, UserRepository, WelcomeRepository, init_db,
 };
 use std::sync::Arc;
 use time::Duration;
@@ -20,6 +20,7 @@ pub struct AppState {
     pub tts_repo: Arc<TtsRepository>,
     pub music_repo: Arc<MusicRepository>,
     pub level_repo: Arc<LevelRepository>,
+    pub welcome_repo: Arc<WelcomeRepository>,
     pub http_client: reqwest::Client,
 }
 
@@ -37,7 +38,8 @@ async fn main() -> anyhow::Result<()> {
     let moderation_repo = Arc::new(ModerationRepository::new(pool.clone()));
     let tts_repo = Arc::new(TtsRepository::new(pool.clone()));
     let music_repo = Arc::new(MusicRepository::new(pool.clone()));
-    let level_repo = Arc::new(LevelRepository::new(pool));
+    let level_repo = Arc::new(LevelRepository::new(pool.clone()));
+    let welcome_repo = Arc::new(WelcomeRepository::new(pool));
 
     let http_client = reqwest::Client::new();
 
@@ -50,6 +52,7 @@ async fn main() -> anyhow::Result<()> {
         tts_repo,
         music_repo,
         level_repo,
+        welcome_repo,
         http_client,
     });
 
@@ -66,12 +69,14 @@ async fn main() -> anyhow::Result<()> {
         .route("/dashboard", get(routes::dashboard))
         .route("/settings/bot", get(routes::bot_settings))
         .route("/settings/leveling", get(routes::leveling_settings))
+        .route("/settings/welcome", get(routes::welcome_settings))
         .route("/settings/tickets", get(routes::ticket_settings))
         .route("/settings/moderation", get(routes::moderation_settings))
         .route("/settings/tts", get(routes::tts_settings))
         .route("/settings/music", get(routes::music_settings))
         .route("/api/settings", post(routes::update_settings))
         .route("/api/leveling/settings", post(routes::update_leveling_settings))
+        .route("/api/welcome/settings", post(routes::update_welcome_settings))
         .route("/api/guild/resources", get(routes::get_guild_resources))
         .route("/api/ping", get(routes::ping))
         .route("/logout", get(routes::logout))
